@@ -12,12 +12,14 @@ test-job:
 
 build:
   stage: build
+  image: maven:3.9-eclipse-temurin-21    
   script:
     - java -version
     - mvn clean compile
 
 package:
   stage: package
+  image: maven:3.9-eclipse-temurin-21    
   script:
     - echo " Packaging Todo List into a JAR..."
     - mvn package -DskipTests
