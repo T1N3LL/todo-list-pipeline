@@ -1,3 +1,5 @@
+image: maven:3.9-eclipse-temurin-21
+
 stages:
   - build
   - package
@@ -12,15 +14,20 @@ test-job:
 
 build:
   stage: build
-  image: maven:3.9-eclipse-temurin-21    
+  image: maven:3.9-eclipse-temurin-21
   script:
+    - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    - export PATH=$JAVA_HOME/bin:$PATH
     - java -version
+    - mvn -version
     - mvn clean compile
 
 package:
   stage: package
-  image: maven:3.9-eclipse-temurin-21    
+  image: maven:3.9-eclipse-temurin-21
   script:
+    - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    - export PATH=$JAVA_HOME/bin:$PATH
     - echo " Packaging Todo List into a JAR..."
     - mvn package -DskipTests
   artifacts:
