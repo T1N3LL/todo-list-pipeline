@@ -1,3 +1,12 @@
 test-job:
   script:
     - echo "Group runner works!"
+
+stages:
+  - build
+
+build:
+  stage: build
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn clean compile
