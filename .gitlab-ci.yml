@@ -12,19 +12,16 @@ test-job:
 
 build:
   stage: build
+  image: maven:3.9-eclipse-temurin-21
   script:
-    - sudo apt-get update -y
-    - sudo apt-get install -y maven
-    - export JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
     - java -version
     - mvn clean compile
 
 package:
   stage: package
+  image: maven:3.9-eclipse-temurin-21
   script:
-    - sudo apt-get update -y
-    - sudo apt-get install -y maven
-    - echo "📦 Packaging Todo List into a JAR..."
+    - echo " Packaging Todo List into a JAR..."
     - mvn package -DskipTests
   artifacts:
     paths:
