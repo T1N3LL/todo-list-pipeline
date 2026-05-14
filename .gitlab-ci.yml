@@ -6,20 +6,20 @@ stages:
   - deploy
 
 test-job:
+  stage: test
   script:
     - echo "Group runner works!"
 
-
 build:
   stage: build
-  image: maven:3.9-eclipse-temurin-17
   script:
+    - apt-get update -y && apt-get install -y maven
     - mvn clean compile
 
 package:
   stage: package
-  image: maven:3.9-eclipse-temurin-17
   script:
+    - apt-get update -y && apt-get install -y maven
     - echo " Packaging Todo List into a JAR..."
     - mvn package -DskipTests
   artifacts:
