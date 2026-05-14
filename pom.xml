@@ -15,7 +15,7 @@
 	<name>todolist</name>
 	<description>A simple Todo-List </description>
 	<properties>
-		<java.version>23</java.version>
+		<java.version>21</java.version>
 	</properties>
 	<dependencies>
 
@@ -79,8 +79,8 @@
     <artifactId>maven-compiler-plugin</artifactId>
     <version>3.11.0</version>
     <configuration>
-        <source>25</source>
-        <target>25</target>
+        <source>21</source>
+        <target>21</target>
         <annotationProcessorPaths>
             <path>
                 <groupId>org.projectlombok</groupId>

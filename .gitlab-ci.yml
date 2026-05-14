@@ -13,14 +13,18 @@ test-job:
 build:
   stage: build
   script:
-    - sudo apt-get update -y && sudo apt-get install -y maven
+    - sudo apt-get update -y
+    - sudo apt-get install -y maven
+    - export JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
+    - java -version
     - mvn clean compile
 
 package:
   stage: package
   script:
-    - sudo apt-get update -y && sudo apt-get install -y maven
-    - echo " Packaging Todo List into a JAR..."
+    - sudo apt-get update -y
+    - sudo apt-get install -y maven
+    - echo "📦 Packaging Todo List into a JAR..."
     - mvn package -DskipTests
   artifacts:
     paths:
