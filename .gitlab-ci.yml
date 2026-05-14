@@ -13,13 +13,13 @@ test-job:
 build:
   stage: build
   script:
-    - apt-get update -y && apt-get install -y maven
+    - sudo apt-get update -y && sudo apt-get install -y maven
     - mvn clean compile
 
 package:
   stage: package
   script:
-    - apt-get update -y && apt-get install -y maven
+    - sudo apt-get update -y && sudo apt-get install -y maven
     - echo " Packaging Todo List into a JAR..."
     - mvn package -DskipTests
   artifacts:
