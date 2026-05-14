@@ -6,8 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.3.6</version>
-
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>th.ab.demo</groupId>
 	<artifactId>todolist</artifactId>
@@ -18,12 +17,10 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
-
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
@@ -50,7 +47,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.44</version> 
+			<version>1.18.44</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -74,22 +71,8 @@
 					</excludes>
 				</configuration>
 			</plugin>
-<plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-compiler-plugin</artifactId>
-    <version>3.13.0</version>
-    <configuration>
-        <source>21</source>
-        <target>21</target>
-        <annotationProcessorPaths>
-            <path>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>1.18.44</version>
-            </path>
-        </annotationProcessorPaths>
-    </configuration>
-</plugin>
+
+			<!-- COMPILER PLUGIN REMOVED — Spring Boot 3.3.6 handles this automatically via java.version -->
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -101,7 +84,6 @@
 					</excludes>
 				</configuration>
 			</plugin>
-
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
