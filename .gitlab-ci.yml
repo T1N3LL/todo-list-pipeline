@@ -4,9 +4,93 @@ test-job:
 
 stages:
   - build
+  - package
+  - test
+  - publish
+  - deploy
 
 build:
   stage: build
   image: maven:3.9-eclipse-temurin-17
   script:
     - mvn clean compile
+
+# ---------------------------------------------------------------------------
+# Notes for the team (visible in MRs so we can sort these out together):
+#
+# FLAG (publish branch): the publish job runs `docker build` which expects
+#   target/*.jar to exist, but publish does not declare `needs: [package]`.
+#   Without that dependency the package-stage artifact is not pulled into the
+#   publish job and the COPY in the Dockerfile will fail.
+#
+# FLAG (publish branch): the Dockerfile uses `openjdk:17-jdk-slim`, but
+#   pom.xml declares Java 23 (and maven-compiler-plugin even targets 25).
+#   A fat jar compiled for 23/25 will not start on a Java 17 JRE.
+#   Suggestion: switch the base image to `eclipse-temurin:23-jre-jammy`.
+#
+# FLAG (publish branch): the publish job uses docker:24.0.5 + dind, but the
+#   runner registered on 10.97.15.178 is a *shell* executor. dind services
+#   only spin up with the docker executor, so that job will likely fail on
+#   our runner. Either register a docker executor, or rewrite publish to use
+#   the host docker daemon via the shell executor (same pattern as below).
+#
+# FLAG (publish branch): the image is pushed only as `:latest`. Adding
+#   `-t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA` alongside `:latest` gives every
+#   build a unique, traceable tag and makes rollbacks possible.
+# ---------------------------------------------------------------------------
+
+deploy-todolist:
+  stage: deploy
+  # TODO: confirm this tag. Run `sudo gitlab-runner list` on the VM
+  # (10.97.15.178) and use whatever tag was set when the shell runner was
+  # registered. It is commonly "shell" but may differ for our group runner.
+  tags:
+    - shell
+  environment:
+    name: staging
+    url: http://10.97.15.178:8080
+  variables:
+    CONTAINER_NAME: todolist
+    APP_PORT: "8080"
+    # TEMP: nginx serves on container port 80; map host 8080 -> container 80.
+    CONTAINER_PORT: "80"
+    # TEMP: nginx has no /actuator/health; probe the root index page instead.
+    HEALTH_URL: "http://localhost:8080/"
+    # TEMP: smoke-test image while the team's publish stage is unfinished.
+    DEPLOY_IMAGE: "nginx:alpine"
+  before_script:
+    # --password-stdin avoids leaking the token into the process list / logs.
+    # TEMP: registry login disabled for the nginx smoke test (public image,
+    # no auth needed). Re-enable when switching back to $CI_REGISTRY_IMAGE.
+    - echo "Skipping registry login for nginx smoke test."
+  script:
+    - docker pull "$DEPLOY_IMAGE"
+    # Idempotent: remove any previous container so re-runs don't collide on
+    # the container name or the host port.
+    - docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+    - docker run -d
+        --name "$CONTAINER_NAME"
+        --restart unless-stopped
+        -p ${APP_PORT}:${CONTAINER_PORT}
+        "$DEPLOY_IMAGE"
+    - |
+      echo "Waiting for $HEALTH_URL to return HTTP 200 (max 60s)..."
+      for i in $(seq 1 30); do
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+        if [ "$STATUS" = "200" ]; then
+          echo "Health check passed on attempt $i (HTTP 200)."
+          exit 0
+        fi
+        echo "Attempt $i/30: got HTTP $STATUS, retrying in 2s..."
+        sleep 2
+      done
+      echo "Health check FAILED after 60 seconds. Last 100 lines of container logs:"
+      docker logs --tail 100 "$CONTAINER_NAME" || true
+      exit 1
+  after_script:
+    # TEMP: no-op while registry login is skipped for the nginx smoke test.
+    - echo "No registry logout needed for nginx smoke test."
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH =~ /^feat\/deploy-stage/'
