@@ -1,12 +1,36 @@
-test-job:
-  script:
-    - echo "Group runner works!"
+image: maven:3.9-eclipse-temurin-21
 
 stages:
   - build
+  - package
+  - test
+  - publish
+  - deploy
+
+test-job:
+  stage: test
+  script:
+    - echo "Group runner works!"
 
 build:
   stage: build
-  image: maven:3.9-eclipse-temurin-17
+  image: maven:3.9-eclipse-temurin-21
   script:
+    - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    - export PATH=$JAVA_HOME/bin:$PATH
+    - java -version
+    - mvn -version
     - mvn clean compile
+
+package:
+  stage: package
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    - export PATH=$JAVA_HOME/bin:$PATH
+    - echo " Packaging Todo List into a JAR..."
+    - mvn package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 hour
