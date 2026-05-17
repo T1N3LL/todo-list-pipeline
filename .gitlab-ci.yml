@@ -46,23 +46,31 @@ deploy-todolist:
   # registered. It is commonly "shell" but may differ for our group runner.
   tags:
     - shell
+  # `optional: true` keeps this job runnable if publish is filtered out of
+  # a given pipeline (e.g. an MR pipeline where rules skip publish). The
+  # `docker pull` below will then fail with a clear "manifest unknown" if
+  # publish never produced the SHA-tagged image we expect.
+  needs:
+    - job: publish
+      optional: true
   environment:
     name: staging
     url: http://10.97.15.178:8080
   variables:
     CONTAINER_NAME: todolist
     APP_PORT: "8080"
-    # TEMP: nginx serves on container port 80; map host 8080 -> container 80.
-    CONTAINER_PORT: "80"
-    # TEMP: nginx has no /actuator/health; probe the root index page instead.
-    HEALTH_URL: "http://localhost:8080/"
-    # TEMP: smoke-test image while the team's publish stage is unfinished.
-    DEPLOY_IMAGE: "nginx:alpine"
+    # Spring Boot defaults to 8080; actuator is on the classpath via
+    # spring-boot-starter-actuator, so /actuator/health returns 200 once
+    # the app is ready.
+    CONTAINER_PORT: "8080"
+    HEALTH_URL: "http://localhost:8080/actuator/health"
+    # Main's publish job only tags `:latest` (the :SHA suggestion from our
+    # earlier FLAG was not applied). Track that as a follow-up — for now we
+    # deploy whatever was most recently pushed.
+    DEPLOY_IMAGE: "${CI_REGISTRY_IMAGE}:latest"
   before_script:
-    # --password-stdin avoids leaking the token into the process list / logs.
-    # TEMP: registry login disabled for the nginx smoke test (public image,
-    # no auth needed). Re-enable when switching back to $CI_REGISTRY_IMAGE.
-    - echo "Skipping registry login for nginx smoke test."
+    # --password-stdin keeps the token out of the process list / job log.
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - docker pull "$DEPLOY_IMAGE"
     # Idempotent: remove any previous container so re-runs don't collide on
@@ -88,8 +96,7 @@ deploy-todolist:
       docker logs --tail 100 "$CONTAINER_NAME" || true
       exit 1
   after_script:
-    # TEMP: no-op while registry login is skipped for the nginx smoke test.
-    - echo "No registry logout needed for nginx smoke test."
+    - docker logout "$CI_REGISTRY" || true
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
