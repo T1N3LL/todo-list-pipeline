@@ -44,3 +44,64 @@ publish:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build -t $CI_REGISTRY_IMAGE:latest .
     - docker push $CI_REGISTRY_IMAGE:latest
+
+deploy-todolist:
+  stage: deploy
+  # Targets group runner #368 (ngCBvITP) — shell executor on the VM
+  # (10.97.15.178). That runner was registered with the `ubuntu` tag, not
+  # `shell`, so we match its actual tag.
+  tags:
+    - ubuntu
+  # `optional: true` keeps this job runnable on pipelines where publish is
+  # filtered out (e.g. MR pipelines). The `docker pull` below will then fail
+  # with a clear "manifest unknown" if no publish has ever run.
+  needs:
+    - job: publish
+      optional: true
+  environment:
+    name: staging
+    url: http://10.97.15.178:8080
+  variables:
+    CONTAINER_NAME: todolist
+    APP_PORT: "8080"
+    # Spring Boot defaults to 8080; actuator is on the classpath via
+    # spring-boot-starter-actuator, so /actuator/health returns 200 once
+    # the app is ready.
+    CONTAINER_PORT: "8080"
+    HEALTH_URL: "http://localhost:8080/actuator/health"
+    # Publish currently only tags `:latest`. Follow-up: also tag
+    # `$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA` for traceable rollbacks.
+    DEPLOY_IMAGE: "${CI_REGISTRY_IMAGE}:latest"
+  before_script:
+    # --password-stdin keeps the token out of the process list / job log.
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker pull "$DEPLOY_IMAGE"
+    # Idempotent: remove any previous container so re-runs don't collide on
+    # the container name or the host port.
+    - docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+    - docker run -d
+        --name "$CONTAINER_NAME"
+        --restart unless-stopped
+        -p ${APP_PORT}:${CONTAINER_PORT}
+        "$DEPLOY_IMAGE"
+    - |
+      echo "Waiting for $HEALTH_URL to return HTTP 200 (max 60s)..."
+      for i in $(seq 1 30); do
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+        if [ "$STATUS" = "200" ]; then
+          echo "Health check passed on attempt $i (HTTP 200)."
+          exit 0
+        fi
+        echo "Attempt $i/30: got HTTP $STATUS, retrying in 2s..."
+        sleep 2
+      done
+      echo "Health check FAILED after 60 seconds. Last 100 lines of container logs:"
+      docker logs --tail 100 "$CONTAINER_NAME" || true
+      exit 1
+  after_script:
+    - docker logout "$CI_REGISTRY" || true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH =~ /^feat\/deploy-stage/'
