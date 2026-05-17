@@ -1,6 +1,4 @@
-test-job:
-  script:
-    - echo "Group runner works!"
+image: maven:3.9-eclipse-temurin-21
 
 stages:
   - build
@@ -9,35 +7,43 @@ stages:
   - publish
   - deploy
 
+test-job:
+  stage: test
+  script:
+    - echo "Group runner works!"
+
 build:
   stage: build
-  image: maven:3.9-eclipse-temurin-17
+  image: maven:3.9-eclipse-temurin-21
   script:
+    - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    - export PATH=$JAVA_HOME/bin:$PATH
+    - java -version
+    - mvn -version
     - mvn clean compile
 
-# ---------------------------------------------------------------------------
-# Notes for the team (visible in MRs so we can sort these out together):
-#
-# FLAG (publish branch): the publish job runs `docker build` which expects
-#   target/*.jar to exist, but publish does not declare `needs: [package]`.
-#   Without that dependency the package-stage artifact is not pulled into the
-#   publish job and the COPY in the Dockerfile will fail.
-#
-# FLAG (publish branch): the Dockerfile uses `openjdk:17-jdk-slim`, but
-#   pom.xml declares Java 23 (and maven-compiler-plugin even targets 25).
-#   A fat jar compiled for 23/25 will not start on a Java 17 JRE.
-#   Suggestion: switch the base image to `eclipse-temurin:23-jre-jammy`.
-#
-# FLAG (publish branch): the publish job uses docker:24.0.5 + dind, but the
-#   runner registered on 10.97.15.178 is a *shell* executor. dind services
-#   only spin up with the docker executor, so that job will likely fail on
-#   our runner. Either register a docker executor, or rewrite publish to use
-#   the host docker daemon via the shell executor (same pattern as below).
-#
-# FLAG (publish branch): the image is pushed only as `:latest`. Adding
-#   `-t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA` alongside `:latest` gives every
-#   build a unique, traceable tag and makes rollbacks possible.
-# ---------------------------------------------------------------------------
+package:
+  stage: package
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    - export PATH=$JAVA_HOME/bin:$PATH
+    - echo " Packaging Todo List into a JAR..."
+    - mvn package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 hour
+
+publish:
+  stage: publish
+  image: docker:24.0.5
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:latest
 
 deploy-todolist:
   stage: deploy
@@ -46,10 +52,9 @@ deploy-todolist:
   # registered. It is commonly "shell" but may differ for our group runner.
   tags:
     - shell
-  # `optional: true` keeps this job runnable if publish is filtered out of
-  # a given pipeline (e.g. an MR pipeline where rules skip publish). The
-  # `docker pull` below will then fail with a clear "manifest unknown" if
-  # publish never produced the SHA-tagged image we expect.
+  # `optional: true` keeps this job runnable on pipelines where publish is
+  # filtered out (e.g. MR pipelines). The `docker pull` below will then fail
+  # with a clear "manifest unknown" if no publish has ever run.
   needs:
     - job: publish
       optional: true
@@ -64,9 +69,8 @@ deploy-todolist:
     # the app is ready.
     CONTAINER_PORT: "8080"
     HEALTH_URL: "http://localhost:8080/actuator/health"
-    # Main's publish job only tags `:latest` (the :SHA suggestion from our
-    # earlier FLAG was not applied). Track that as a follow-up — for now we
-    # deploy whatever was most recently pushed.
+    # Publish currently only tags `:latest`. Follow-up: also tag
+    # `$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA` for traceable rollbacks.
     DEPLOY_IMAGE: "${CI_REGISTRY_IMAGE}:latest"
   before_script:
     # --password-stdin keeps the token out of the process list / job log.
