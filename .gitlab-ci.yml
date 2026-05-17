@@ -47,11 +47,11 @@ publish:
 
 deploy-todolist:
   stage: deploy
-  # TODO: confirm this tag. Run `sudo gitlab-runner list` on the VM
-  # (10.97.15.178) and use whatever tag was set when the shell runner was
-  # registered. It is commonly "shell" but may differ for our group runner.
+  # Targets group runner #368 (ngCBvITP) — shell executor on the VM
+  # (10.97.15.178). That runner was registered with the `ubuntu` tag, not
+  # `shell`, so we match its actual tag.
   tags:
-    - shell
+    - ubuntu
   # `optional: true` keeps this job runnable on pipelines where publish is
   # filtered out (e.g. MR pipelines). The `docker pull` below will then fail
   # with a clear "manifest unknown" if no publish has ever run.
