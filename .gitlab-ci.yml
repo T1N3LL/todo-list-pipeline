@@ -9,8 +9,13 @@ stages:
 
 test-job:
   stage: test
+  image: maven:3.9-eclipse-temurin-21
   script:
-    - echo "Group runner works!"
+    - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+    - export PATH=$JAVA_HOME/bin:$PATH
+    - echo "Running Unit and Integration Tests..."
+    - mvn test
+    - mvn verify
 
 build:
   stage: build
