@@ -6,6 +6,8 @@ stages:
   - test
   - publish
   - deploy
+  - sca-package
+
 
 test-job:
   stage: test
@@ -110,3 +112,18 @@ deploy-todolist:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_BRANCH =~ /^feat\/deploy-stage/'
+
+sca-package-dependency-check:
+  stage: sca-package
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - echo "Running OWASP Dependency-Check..."
+    - mvn org.owasp:dependency-check-maven:check -Dformat=ALL
+  artifacts:
+    when: always
+    paths:
+      - target/dependency-check.report.html
+      - target/dependency-check.report.xml
+      - target/dependency-check.report.json
+    expire_in: never
+  
