@@ -119,7 +119,7 @@ sca-package-dependency-check:
   script:
     - echo "Running OWASP Dependency-Check..."
     - mvn org.owasp:dependency-check-maven:check -Dformat=ALL
-    - find target -name "*dependency*
+    - find target -name "*dependency*"
   artifacts:
     when: always
     paths:
