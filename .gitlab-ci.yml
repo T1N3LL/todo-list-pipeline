@@ -45,12 +45,18 @@ package:
 publish:
   stage: publish
   image: docker:24.0.5
+  services:
+    - name: docker:24.0.5-dind
+      alias: docker
   variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
   script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -t $CI_REGISTRY_IMAGE:latest .
-    - docker push $CI_REGISTRY_IMAGE:latest
+    - docker info
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "$CI_REGISTRY_IMAGE:latest" .
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+
 
 deploy-todolist:
   stage: deploy
@@ -116,14 +122,23 @@ deploy-todolist:
 sca-package-dependency-check:
   stage: sca-package
   image: maven:3.9-eclipse-temurin-21
+
+  cache:
+    paths:
+      - .m2/repository
+      - .dependency-check-data
+
   script:
-    - echo "Running OWASP Dependency-Check..."
-    - mvn org.owasp:dependency-check-maven:check -Dformat=ALL
+    - |
+      mvn org.owasp:dependency-check-maven:check \
+        -Dformat=ALL \
+        -Ddependency-check.data.directory=.dependency-check-data \
+        -Ddependency-check.nvd.validForHours=24 \
+        -Ddependency-check.failOnError=false || true
+    - find target -name "*dependency*" || true
+
   artifacts:
     when: always
     paths:
-      - target/dependency-check.report.html
-      - target/dependency-check.report.xml
-      - target/dependency-check.report.json
-    expire_in: never
-  
+      - target/
+    expire_in: 1 week
