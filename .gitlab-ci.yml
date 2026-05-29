@@ -138,13 +138,12 @@ sca-package-dependency-check:
   image: maven:3.9-eclipse-temurin-21
   script:
     - echo "Running OWASP Dependency-Check..."
-    - mvn org.owasp:dependency-check-maven:check -Dformat=ALL
-    - find target -name "*dependency*"
+    - mvn org.owasp:dependency-check-maven:check -Dformat=ALL -Ddependency-check.nvd.validForHours=24
   artifacts:
     when: always
     paths:
       - target/dependency-check-report.html
       - target/dependency-check-report.xml
       - target/dependency-check-report.json
-    expire_in: never
+    expire_in: 1 week
   
