@@ -126,5 +126,5 @@ sca-package-dependency-check:
       - target/dependency-check-report.html
       - target/dependency-check-report.xml
       - target/dependency-check-report.json
-    expire_in: never
+    expire_in: ever
   
