@@ -143,8 +143,8 @@ sca-package-dependency-check:
       - .dependency-check-data
 
   script:
-    - echo "Running OWASP Dependency-Check..."
-    - mvn org.owasp:dependency-check-maven:check \
+  - |
+    mvn org.owasp:dependency-check-maven:check \
       -Dformat=ALL \
       -Ddependency-check.data.directory=.dependency-check-data \
       -Ddependency-check.nvd.validForHours=24 \
