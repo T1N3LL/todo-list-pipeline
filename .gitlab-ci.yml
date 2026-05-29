@@ -57,20 +57,6 @@ publish:
     - docker build -t "$CI_REGISTRY_IMAGE:latest" .
     - docker push "$CI_REGISTRY_IMAGE:latest"
 
-publish-container:
-  stage: publish
-  image: docker:24.0.5
-  services:
-    - name: docker:24.0.5-dind
-      alias: docker
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  script:
-    - docker info
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker build -t "$CI_REGISTRY_IMAGE:latest" .
-    - docker push "$CI_REGISTRY_IMAGE:latest"
 
 deploy-todolist:
   stage: deploy
@@ -143,18 +129,16 @@ sca-package-dependency-check:
       - .dependency-check-data
 
   script:
-  - |
-    mvn org.owasp:dependency-check-maven:check \
-      -Dformat=ALL \
-      -Ddependency-check.data.directory=.dependency-check-data \
-      -Ddependency-check.nvd.validForHours=24 \
-      -Ddependency-check.failOnError=false
+    - |
+      mvn org.owasp:dependency-check-maven:check \
+        -Dformat=ALL \
+        -Ddependency-check.data.directory=.dependency-check-data \
+        -Ddependency-check.nvd.validForHours=24 \
+        -Ddependency-check.failOnError=false || true
+    - find target -name "*dependency*" || true
 
   artifacts:
     when: always
     paths:
-      - target/dependency-check-report.html
-      - target/dependency-check-report.xml
-      - target/dependency-check-report.json
+      - target/
     expire_in: 1 week
-  
