@@ -7,6 +7,7 @@ stages:
   - publish
   - deploy
   - sca-package
+  - security
 
 
 test-job:
@@ -142,3 +143,17 @@ sca-package-dependency-check:
     paths:
       - target/
     expire_in: 1 week
+
+sast-semgrep:
+  stage: security
+  image: returntocorp/semgrep
+  script:
+    - semgrep scan --config auto .
+  allow_failure: true
+
+sast-gitleaks:
+  stage: security
+  image: zricethezav/gitleaks:latest
+  script:
+    - gitleaks detect --source . --verbose
+  allow_failure: true
