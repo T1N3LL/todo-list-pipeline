@@ -173,7 +173,7 @@ sast-gitleaks:
     entrypoint: [""]
   script:
     - gitleaks detect --source . --verbose || true
-  allow_failure: 
+  allow_failure:
     
 sca-container-trivy:
   stage: sca-container
