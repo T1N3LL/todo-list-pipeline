@@ -165,6 +165,7 @@ sca-package:
         --out reports \
         --nvdApiKey "$NVD_API_KEY" \
         --disableOssIndex
+    - ls -R reports
 
   artifacts:
     when: always
