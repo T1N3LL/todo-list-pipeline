@@ -165,9 +165,14 @@ sast-gitleaks:
     
 sca-container-trivy:
   stage: sca-container
+
   image:
     name: aquasec/trivy:latest
     entrypoint: [""]
+
+  before_script:
+    - trivy image --download-db-only
+    - echo "$CI_REGISTRY_PASSWORD" | trivy registry login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
 
   script:
     - trivy image --severity HIGH,CRITICAL --exit-code 0 $CI_REGISTRY_IMAGE:latest
