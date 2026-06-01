@@ -150,11 +150,14 @@ sca-package-dependency-check:
 
 sca-package:
   stage: security
+
   image:
-    name: owasp/dependency-check:latest
+    name: owasp/dependency-check:12.1.0
     entrypoint: [""]
 
   script:
+    - mkdir -p reports
+    - if [ -z "$NVD_API_KEY" ]; then echo "KEY EMPTY"; else echo "KEY FOUND"; fi
     - |
       /usr/share/dependency-check/bin/dependency-check.sh \
         --scan . \
