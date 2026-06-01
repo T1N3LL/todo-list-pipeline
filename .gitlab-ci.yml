@@ -8,6 +8,7 @@ stages:
   - deploy
   - sca-package
   - security
+  - sca-container
 
 
 test-job:
@@ -158,4 +159,15 @@ sast-gitleaks:
     entrypoint: [""]
   script:
     - gitleaks detect --source . --verbose || true
+  allow_failure: 
+    
+sca-container-trivy:
+  stage: sca-container
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+
+  script:
+    - trivy image --severity HIGH,CRITICAL --exit-code 0 $CI_REGISTRY_IMAGE:latest
+
   allow_failure: true
