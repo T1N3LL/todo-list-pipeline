@@ -164,6 +164,7 @@ sca-package:
         --format HTML \
         --out reports \
         --nvdApiKey "$NVD_API_KEY"
+        --disableOssIndex
 
   artifacts:
     when: always
