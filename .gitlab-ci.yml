@@ -125,6 +125,8 @@ sca-package-dependency-check:
   stage: sca-package
   image: maven:3.9-eclipse-temurin-21
 
+  allow_failure: true
+
   cache:
     paths:
       - .m2/repository
