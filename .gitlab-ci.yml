@@ -163,7 +163,7 @@ sca-package:
         --scan . \
         --format HTML \
         --out reports \
-        --nvdApiKey "$NVD_API_KEY"
+        --nvdApiKey "$NVD_API_KEY" \
         --disableOssIndex
 
   artifacts:
