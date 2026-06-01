@@ -147,6 +147,18 @@ sca-package-dependency-check:
       - target/
     expire_in: 1 week
 
+sca-package:
+  stage: security
+  image:
+    name: owasp/dependency-check:latest
+    entrypoint: [""]
+  script:
+    - /usr/share/dependency-check/bin/dependency-check.sh
+      --scan .
+      --format HTML
+      --out reports
+      --nvdApiKey $NVD_API_KEY
+
 sast-semgrep:
   stage: security
   image: returntocorp/semgrep
