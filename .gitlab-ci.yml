@@ -165,7 +165,7 @@ sca-package:
   artifacts:
     when: always
     paths:
-      - reports/
+      - reports/  
 
 sast-semgrep:
   stage: security
