@@ -59,6 +59,36 @@ publish:
     - docker build -t "$CI_REGISTRY_IMAGE:latest" .
     - docker push "$CI_REGISTRY_IMAGE:latest"
 
+publish-package:
+  stage: publish
+  image: maven:3.9-eclipse-temurin-21
+  needs:
+    - job: package
+      artifacts: true
+  script:
+    - |
+      cat > settings.xml <<'EOF'
+      <settings>
+        <servers>
+          <server>
+            <id>gitlab-maven</id>
+            <configuration>
+              <httpHeaders>
+                <property>
+                  <name>Job-Token</name>
+                  <value>${env.CI_JOB_TOKEN}</value>
+                </property>
+              </httpHeaders>
+            </configuration>
+          </server>
+        </servers>
+      </settings>
+      EOF
+    # Reuse the JAR from the `package` stage (passed via needs.artifacts:true)
+    # rather than rebuilding. -Dmaven.install.skip avoids a redundant local
+    # install before deploy.
+    - mvn -s settings.xml deploy -DskipTests -Dmaven.install.skip=true
+
 
 deploy-todolist:
   stage: deploy
