@@ -114,11 +114,12 @@ deploy:
     # Idempotent: remove any previous container so re-runs don't collide on
     # the container name or the host port.
     - docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-    - docker run -d
-        --name "$CONTAINER_NAME"
-        --restart unless-stopped
-        -p ${APP_PORT}:${CONTAINER_PORT}
-        "$DEPLOY_IMAGE"
+    - |
+        docker run -d \
+          --name "$CONTAINER_NAME" \
+          --restart unless-stopped \
+          -p ${APP_PORT}:${CONTAINER_PORT} \
+          "$DEPLOY_IMAGE"
     - |
       echo "Waiting for $HEALTH_URL to return HTTP 200 (max 60s)..."
       for i in $(seq 1 30); do
