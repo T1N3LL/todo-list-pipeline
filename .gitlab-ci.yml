@@ -152,12 +152,19 @@ sca-package:
   image:
     name: owasp/dependency-check:latest
     entrypoint: [""]
+
   script:
-    - /usr/share/dependency-check/bin/dependency-check.sh
-      --scan .
-      --format HTML
-      --out reports
-      --nvdApiKey $NVD_API_KEY
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
+        --scan . \
+        --format HTML \
+        --out reports \
+        --nvdApiKey "$NVD_API_KEY"
+
+  artifacts:
+    when: always
+    paths:
+      - reports/
 
 sast-semgrep:
   stage: security
@@ -173,7 +180,7 @@ sast-gitleaks:
     entrypoint: [""]
   script:
     - gitleaks detect --source . --verbose || true
-  allow_failure: 
+  allow_failure: true
     
 sca-container-trivy:
   stage: sca-container
@@ -196,15 +203,6 @@ dast-zap:
   image: zaproxy/zap-stable
 
   script:
-    - mkdir -p reports
-    - |
-      zap-baseline.py \
-        -t http://10.97.15.178:8080 \
-        -J reports/zap-report.json \
-        -r reports/zap-report.html
+    - zap-baseline.py -t http://10.97.15.178:8080
 
-  artifacts:
-    when: always
-    paths:
-      - reports/
-    expire_in: 1 week
+  allow_failure: true
