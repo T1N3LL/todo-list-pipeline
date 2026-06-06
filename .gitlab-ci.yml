@@ -91,7 +91,7 @@ deploy:
   # filtered out (e.g. MR pipelines). The `docker pull` below will then fail
   # with a clear "manifest unknown" if no publish has ever run.
   needs:
-    - job: deploy
+    - job: publish-container
       optional: true
   environment:
     name: staging
