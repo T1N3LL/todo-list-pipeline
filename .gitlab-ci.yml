@@ -8,7 +8,7 @@ stages:
   - sca-package
   - publish
   - sca-container
-  - deploy
+  - zap_scan
   - dast
   - security_scan
   
@@ -222,6 +222,6 @@ sca-container-trivy:
   allow_failure: true
 
 dast-test:
-  stage: dast
+  stage: zap_scan
   script:
     - echo "DAST stage works"
