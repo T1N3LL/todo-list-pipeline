@@ -190,3 +190,20 @@ sca-container-trivy:
     - trivy image --severity HIGH,CRITICAL --exit-code 0 $CI_REGISTRY_IMAGE:latest
 
   allow_failure: true
+
+dast-zap:
+  stage: security
+  image: zaproxy/zap-stable
+
+  script:
+    - mkdir -p reports
+    - zap-baseline.py \
+        -t http://10.97.15.178:8080 \
+        -J reports/zap-report.json \
+        -r reports/zap-report.html
+
+  artifacts:
+    when: always
+    paths:
+      - reports/
+    expire_in: 1 week
