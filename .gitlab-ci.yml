@@ -2,13 +2,16 @@ image: maven:3.9-eclipse-temurin-21
 
 stages:
   - build
-  - package
   - test
-  - publish
-  - deploy
+  - sast
+  - package
   - sca-package
-  - security
+  - publish
   - sca-container
+  - deploy
+  - dast
+  - security_scan
+  
 
 
 test-job:
@@ -31,7 +34,7 @@ build:
     - mvn -version
     - mvn clean compile
 
-package:
+package-jar:
   stage: package
   image: maven:3.9-eclipse-temurin-21
   script:
@@ -44,7 +47,23 @@ package:
       - target/*.jar
     expire_in: 1 hour
 
-publish:
+publish-package:
+  stage: publish
+
+  needs:
+    - job: package-jar
+      artifacts: true
+
+  script:
+    - echo "Publishing package..."
+    - ls target/*.jar
+
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
+
+publish-container:
   stage: publish
   image: docker:24.0.5
   services:
@@ -63,7 +82,7 @@ publish-package:
   stage: publish
   image: maven:3.9-eclipse-temurin-21
   needs:
-    - job: package
+    - job: package-jar
       artifacts: true
   script:
     - |
@@ -90,7 +109,7 @@ publish-package:
     - mvn -s settings.xml deploy -DskipTests -Dmaven.install.skip=true
 
 
-deploy-todolist:
+deploy:
   stage: deploy
   # Targets group runner #368 (ngCBvITP) — shell executor on the VM
   # (10.97.15.178). That runner was registered with the `ubuntu` tag, not
@@ -101,7 +120,7 @@ deploy-todolist:
   # filtered out (e.g. MR pipelines). The `docker pull` below will then fail
   # with a clear "manifest unknown" if no publish has ever run.
   needs:
-    - job: publish
+    - job: publish-container
       optional: true
   environment:
     name: staging
@@ -120,16 +139,18 @@ deploy-todolist:
   before_script:
     # --password-stdin keeps the token out of the process list / job log.
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  
+  # Idempotent: remove any previous container so re-runs don't collide on
+    # the container name or the host port.
   script:
     - docker pull "$DEPLOY_IMAGE"
-    # Idempotent: remove any previous container so re-runs don't collide on
-    # the container name or the host port.
     - docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-    - docker run -d
-        --name "$CONTAINER_NAME"
-        --restart unless-stopped
-        -p ${APP_PORT}:${CONTAINER_PORT}
-        "$DEPLOY_IMAGE"
+    - |
+        docker run -d \
+          --name "$CONTAINER_NAME" \
+          --restart unless-stopped \
+          -p ${APP_PORT}:${CONTAINER_PORT} \
+          "$DEPLOY_IMAGE"
     - |
       echo "Waiting for $HEALTH_URL to return HTTP 200 (max 60s)..."
       for i in $(seq 1 30); do
@@ -149,6 +170,7 @@ deploy-todolist:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "toDoListTest"'
     - if: '$CI_COMMIT_BRANCH =~ /^feat\/deploy-stage/'
 
 sca-package-dependency-check:
@@ -178,11 +200,11 @@ sca-package-dependency-check:
     expire_in: 1 week
 
 
-sca-package:
-  stage: security
-
+#API
+dependency_check_scan:
+  stage: security_scan
   image:
-    name: owasp/dependency-check:12.1.0
+    name: owasp/dependency-check:latest
     entrypoint: [""]
 
   script:
@@ -203,20 +225,20 @@ sca-package:
       - reports/
 
 sast-semgrep:
-  stage: security
+  stage: sast
   image: returntocorp/semgrep
   script:
     - semgrep scan --config auto .
   allow_failure: true
 
 sast-gitleaks:
-  stage: security
+  stage: sast
   image:
     name: zricethezav/gitleaks:latest
     entrypoint: [""]
   script:
     - gitleaks detect --source . --verbose || true
-  allow_failure:
+  allow_failure: true
     
 sca-container-trivy:
   stage: sca-container
@@ -231,5 +253,23 @@ sca-container-trivy:
 
   script:
     - trivy image --severity HIGH,CRITICAL --exit-code 0 $CI_REGISTRY_IMAGE:latest
+
+  allow_failure: true
+
+dast-zap:
+  stage: dast
+
+  image:
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
+
+  script:
+    - echo "Starting ZAP scan"
+    - zap-baseline.py -t http://10.97.15.178:8080 -x zap-report.xml || true
+
+  artifacts:
+    when: always
+    paths:
+      - zap-report.xml
 
   allow_failure: true
