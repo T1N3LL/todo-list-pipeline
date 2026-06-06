@@ -82,7 +82,7 @@ publish-package:
   stage: publish
   image: maven:3.9-eclipse-temurin-21
   needs:
-    - job: package
+    - job: package-jar
       artifacts: true
   script:
     - |
