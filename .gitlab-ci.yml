@@ -2,13 +2,17 @@ image: maven:3.9-eclipse-temurin-21
 
 stages:
   - build
-  - package
   - test
-  - publish
-  - deploy
+  - sast
+  - package
   - sca-package
-  - security
+  - publish
   - sca-container
+  - deploy
+  - fuzzing
+  - dast
+  - security_scan
+  
 
 
 test-job:
@@ -31,7 +35,7 @@ build:
     - mvn -version
     - mvn clean compile
 
-package:
+package-jar:
   stage: package
   image: maven:3.9-eclipse-temurin-21
   script:
@@ -44,7 +48,22 @@ package:
       - target/*.jar
     expire_in: 1 hour
 
-publish:
+publish-package:
+  stage: publish
+
+  needs:
+    - package
+
+  script:
+    - echo "Publishing package..."
+    - ls target/*.jar
+
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
+
+publish-container:
   stage: publish
   image: docker:24.0.5
   services:
@@ -60,7 +79,7 @@ publish:
     - docker push "$CI_REGISTRY_IMAGE:latest"
 
 
-deploy-todolist:
+deploy:
   stage: deploy
   # Targets group runner #368 (ngCBvITP) — shell executor on the VM
   # (10.97.15.178). That runner was registered with the `ubuntu` tag, not
@@ -147,8 +166,8 @@ sca-package-dependency-check:
       - target/
     expire_in: 1 week
 
-sca-package:
-  stage: security
+dependency_check_scan:
+  stage: security_scan
   image:
     name: owasp/dependency-check:latest
     entrypoint: [""]
@@ -167,14 +186,14 @@ sca-package:
       - reports/
 
 sast-semgrep:
-  stage: security
+  stage: sast
   image: returntocorp/semgrep
   script:
     - semgrep scan --config auto .
   allow_failure: true
 
 sast-gitleaks:
-  stage: security
+  stage: sast
   image:
     name: zricethezav/gitleaks:latest
     entrypoint: [""]
@@ -199,10 +218,12 @@ sca-container-trivy:
   allow_failure: true
 
 dast-zap:
-  stage: security
+  stage: dast
   image: zaproxy/zap-stable
 
   script:
-    - zap-baseline.py -t http://10.97.15.178:8080 -I
+  - mkdir -p /zap/wrk
+  - zap-baseline.py -t http://10.97.15.178:8080 -I -x /zap/wrk/zap-report.xml
+  - cp /zap/wrk/zap-report.xml .
 
   allow_failure: true
