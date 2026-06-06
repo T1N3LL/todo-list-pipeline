@@ -9,7 +9,6 @@ stages:
   - publish
   - sca-container
   - deploy
-  - fuzzing
   - dast
   - security_scan
   
@@ -230,6 +229,7 @@ dast-zap:
 
   needs:
     - job: deploy
+      optional: true
 
   script:
     - mkdir -p reports
