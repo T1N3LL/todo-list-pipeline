@@ -222,7 +222,7 @@ sca-container-trivy:
 
   allow_failure: true
 
-dast-zap:
+owasp-zap-scan:
   stage: dast
   image: zaproxy/zap-stable
 
