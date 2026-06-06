@@ -197,7 +197,8 @@ dast-zap:
 
   script:
     - mkdir -p reports
-    - zap-baseline.py \
+    - |
+      zap-baseline.py \
         -t http://10.97.15.178:8080 \
         -J reports/zap-report.json \
         -r reports/zap-report.html
