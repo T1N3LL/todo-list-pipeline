@@ -10,6 +10,7 @@ stages:
   - sca-container
   - deploy
   - fuzzing
+  - dast
   - security_scan
   
 
@@ -221,16 +222,16 @@ sca-container-trivy:
 
   allow_failure: true
 
-# dast-zap:
-#   stage: dast
-#   image: zaproxy/zap-stable
+dast-zap:
+  stage: dast
+  image: zaproxy/zap-stable
 
-#   script:
-#     - mkdir -p reports
-#     - zap-baseline.py -t http://10.97.15.178:8080 -I
-#     - cp /zap/wrk/zap-report.xml reports/ || true
+  script:
+    - mkdir -p /zap/wrk
+    - zap-baseline.py -t http://10.97.15.178:8080 -I -x /zap/wrk/zap-report.xml
+    - cp /zap/wrk/zap-report.xml .
 
-#   artifacts:
-#     when: always
-#     paths:
-#       - reports/
+  artifacts:
+    when: always
+    paths:
+      - zap-report.html
