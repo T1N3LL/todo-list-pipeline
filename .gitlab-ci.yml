@@ -109,10 +109,11 @@ deploy:
   before_script:
     # --password-stdin keeps the token out of the process list / job log.
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  
+  # Idempotent: remove any previous container so re-runs don't collide on
+    # the container name or the host port.
   script:
     - docker pull "$DEPLOY_IMAGE"
-    # Idempotent: remove any previous container so re-runs don't collide on
-    # the container name or the host port.
     - docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
     - |
         docker run -d \
