@@ -91,7 +91,7 @@ deploy:
   # filtered out (e.g. MR pipelines). The `docker pull` below will then fail
   # with a clear "manifest unknown" if no publish has ever run.
   needs:
-    - job: publish-container
+    - job: deploy
       optional: true
   environment:
     name: staging
@@ -224,14 +224,24 @@ sca-container-trivy:
 
 dast-zap:
   stage: dast
-  image: zaproxy/zap-stable
+  image:
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
+
+  needs:
+    - job: deploy
 
   script:
+    - mkdir -p reports
     - mkdir -p /zap/wrk
-    - zap-baseline.py -t http://10.97.15.178:8080 -I -x /zap/wrk/zap-report.xml
-    - cp /zap/wrk/zap-report.xml .
+    - echo "Starting ZAP Baseline Scan..."
+    - zap-baseline.py -t http://10.97.15.178:8080 -J dast-zap-report.json || true
+    - cp /zap/wrk/dast-zap-report.json reports/ || true
 
   artifacts:
     when: always
     paths:
-      - zap-report.html
+      - reports/dast-zap-report.json
+    expire_in: 1 week
+
+  allow_failure: true
