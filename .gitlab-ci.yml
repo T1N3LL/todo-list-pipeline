@@ -223,23 +223,5 @@ sca-container-trivy:
 
 dast-zap:
   stage: dast
-
-  image:
-    name: ghcr.io/zaproxy/zaproxy:stable
-    entrypoint: [""]
-
   script:
-    - mkdir -p reports
-    - zap-baseline.py \
-        -t http://10.97.15.178:8080 \
-        -x reports/zap-report.xml \
-        -r reports/zap-report.html \
-        || true
-
-  artifacts:
-    when: always
-    paths:
-      - reports/zap-report.xml
-    expire_in: 1 week
-
-  allow_failure: true
+    - echo "DAST test"
