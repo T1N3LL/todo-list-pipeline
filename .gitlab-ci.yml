@@ -52,7 +52,8 @@ publish-package:
   stage: publish
 
   needs:
-    - package
+  - job: package-jar
+    artifacts: true
 
   script:
     - echo "Publishing package..."
@@ -90,7 +91,7 @@ deploy:
   # filtered out (e.g. MR pipelines). The `docker pull` below will then fail
   # with a clear "manifest unknown" if no publish has ever run.
   needs:
-    - job: publish
+    - job: publish-container
       optional: true
   environment:
     name: staging
@@ -173,12 +174,13 @@ dependency_check_scan:
     entrypoint: [""]
 
   script:
+    - mkdir -p reports
     - |
-      /usr/share/dependency-check/bin/dependency-check.sh \
-        --scan . \
-        --format HTML \
-        --out reports \
-        --nvdApiKey "$NVD_API_KEY"
+        /usr/share/dependency-check/bin/dependency-check.sh \
+          --scan . \
+          --format HTML \
+          --out reports \
+          --nvdApiKey "$NVD_API_KEY"
 
   artifacts:
     when: always
@@ -222,8 +224,14 @@ dast-zap:
   image: zaproxy/zap-stable
 
   script:
-  - mkdir -p /zap/wrk
-  - zap-baseline.py -t http://10.97.15.178:8080 -I -x /zap/wrk/zap-report.xml
-  - cp /zap/wrk/zap-report.xml .
+    - mkdir -p /zap/wrk
+    - zap-baseline.py -t http://10.97.15.178:8080 -I -x /zap/wrk/zap-report.xml
+    - cp /zap/wrk/zap-report.xml .
+
+  artifacts:
+    when: always
+    paths:
+      - zap-report.xml
+    expire_in: 1 week
 
   allow_failure: true
