@@ -52,8 +52,8 @@ publish-package:
   stage: publish
 
   needs:
-  - job: package-jar
-    artifacts: true
+    - job: package-jar
+      artifacts: true
 
   script:
     - echo "Publishing package..."
@@ -228,13 +228,9 @@ dast-zap:
 
   script:
     - mkdir -p /zap/wrk
-    - zap-baseline.py -t http://10.97.15.178:8080 -I -x zap-report.xml
-    - cp /zap/wrk/zap-report.xml .
+    - zap-baseline.py -t http://10.97.15.178:8080 -I -x /zap/wrk/zap-report.xml
 
   artifacts:
     when: always
     paths:
-      - zap-report.xml
-    expire_in: 1 week
-
-  allow_failure: true
+      - /zap/wrk/zap-report.xml
