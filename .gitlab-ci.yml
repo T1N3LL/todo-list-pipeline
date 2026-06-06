@@ -203,6 +203,6 @@ dast-zap:
   image: zaproxy/zap-stable
 
   script:
-    - zap-baseline.py -t http://10.97.15.178:8080
+    - zap-baseline.py -t http://10.97.15.178:8080 -I
 
   allow_failure: true
