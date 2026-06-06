@@ -168,6 +168,8 @@ sca-package-dependency-check:
       - target/
     expire_in: 1 week
 
+
+#API
 dependency_check_scan:
   stage: security_scan
   image:
