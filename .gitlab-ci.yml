@@ -221,7 +221,7 @@ sca-container-trivy:
 
   allow_failure: true
 
-# dast-zap:
-#   stage: dast
-#   script:
-#     - echo "DAST test"
+dast-test:
+  stage: dast
+  script:
+    - echo "DAST stage works"
