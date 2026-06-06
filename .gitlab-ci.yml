@@ -78,6 +78,36 @@ publish-container:
     - docker build -t "$CI_REGISTRY_IMAGE:latest" .
     - docker push "$CI_REGISTRY_IMAGE:latest"
 
+publish-package:
+  stage: publish
+  image: maven:3.9-eclipse-temurin-21
+  needs:
+    - job: package
+      artifacts: true
+  script:
+    - |
+      cat > settings.xml <<'EOF'
+      <settings>
+        <servers>
+          <server>
+            <id>gitlab-maven</id>
+            <configuration>
+              <httpHeaders>
+                <property>
+                  <name>Job-Token</name>
+                  <value>${env.CI_JOB_TOKEN}</value>
+                </property>
+              </httpHeaders>
+            </configuration>
+          </server>
+        </servers>
+      </settings>
+      EOF
+    # Reuse the JAR from the `package` stage (passed via needs.artifacts:true)
+    # rather than rebuilding. -Dmaven.install.skip avoids a redundant local
+    # install before deploy.
+    - mvn -s settings.xml deploy -DskipTests -Dmaven.install.skip=true
+
 
 deploy:
   stage: deploy
@@ -179,12 +209,15 @@ dependency_check_scan:
 
   script:
     - mkdir -p reports
+    - if [ -z "$NVD_API_KEY" ]; then echo "KEY EMPTY"; else echo "KEY FOUND"; fi
     - |
-        /usr/share/dependency-check/bin/dependency-check.sh \
-          --scan . \
-          --format HTML \
-          --out reports \
-          --nvdApiKey "$NVD_API_KEY"
+      /usr/share/dependency-check/bin/dependency-check.sh \
+        --scan . \
+        --format HTML \
+        --out reports \
+        --nvdApiKey "$NVD_API_KEY" \
+        --disableOssIndex
+    - ls -R reports
 
   artifacts:
     when: always
