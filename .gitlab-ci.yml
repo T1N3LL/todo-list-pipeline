@@ -28,9 +28,14 @@ build:
 unit-test:
   stage: test
   script:
-    - echo "Running Unit and Integration Tests..."
+    - echo "Running Unit Tests..."
     - mvn test
-    - mvn verify
+
+integration-test:
+  stage: test
+  script:
+    - echo "Running Integration Tests..."
+    - mvn verify -Dskip.surefire.tests=true
 
 sast-semgrep:
   stage: sast
@@ -185,7 +190,7 @@ deploy:
 
 fuzzing-Javafuzz:
   stage: fuzzing
-  image: openjdk:21-jdk-slim
+  image: ubuntu:latest
   needs:
     - job: deploy
   script:
