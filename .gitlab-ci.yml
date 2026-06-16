@@ -168,7 +168,7 @@ deploy:
     CONTAINER_PORT: "8080"
     DEPLOY_IMAGE: "${CI_REGISTRY_IMAGE}:latest"
   tags:
-    - agilesec-team-13
+    - ubuntu
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - apk add --no-cache curl
@@ -204,7 +204,7 @@ fuzzing-javafuzz:
   needs:
     - deploy
   tags:
-    - agilesec-team-13
+    - ubuntu
   script:
     - |
       apt-get update && apt-get install -y curl openssl
@@ -252,7 +252,7 @@ dast-zap:
   needs:
     - deploy
   tags:
-    - agilesec-team-13
+    - ubuntu
   script:
     - |
       echo "Waiting for application to be ready..."
