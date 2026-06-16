@@ -156,14 +156,6 @@ sca-container-trivy:
 
 deploy:
   stage: deploy
-  needs:
-    - job: publish-container
-      optional: true
-  variables:
-    CONTAINER_NAME: todolist
-    APP_PORT: "8080"
-    CONTAINER_PORT: "8080"
-    DEPLOY_IMAGE: "${CI_REGISTRY_IMAGE}:latest"
   image: docker:24.0.5
   services:
     - name: docker:24.0.5-dind
@@ -171,8 +163,15 @@ deploy:
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
+    CONTAINER_NAME: todolist
+    APP_PORT: "8080"
+    CONTAINER_PORT: "8080"
+    DEPLOY_IMAGE: "${CI_REGISTRY_IMAGE}:latest"
+  tags:
+    - agilesec-team-13
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - apk add --no-cache curl
   script:
     - docker pull "$DEPLOY_IMAGE"
     - docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
@@ -184,7 +183,6 @@ deploy:
         "$DEPLOY_IMAGE"
     - |
       echo "Waiting for $HEALTH_CHECK_URL to return HTTP 200 (max 60s)..."
-      apk add --no-cache curl
       for i in $(seq 1 30); do
         STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_CHECK_URL" 2>/dev/null || echo "000")
         if [ "$STATUS" = "200" ]; then
@@ -205,6 +203,8 @@ fuzzing-javafuzz:
   image: ubuntu:latest
   needs:
     - deploy
+  tags:
+    - agilesec-team-13
   script:
     - |
       apt-get update && apt-get install -y curl openssl
@@ -251,6 +251,8 @@ dast-zap:
     entrypoint: [""]
   needs:
     - deploy
+  tags:
+    - agilesec-team-13
   script:
     - |
       echo "Waiting for application to be ready..."
