@@ -11,6 +11,7 @@ stages:
   - deploy
   - fuzzing
   - dast
+  - bundle
 
 variables:
   IMAGE_NAME: $CI_REGISTRY_IMAGE/todolist
@@ -201,25 +202,27 @@ fuzzing-Javafuzz:
   needs:
     - job: deploy
   script:
-    - mkdir -p reports
-    - echo "[" > reports/fuzz-report.json
     - |
+      mkdir -p reports
+      echo '{"tool": "javafuzz", "crashes": [' > reports/javafuzz-report.json
+      
       apt-get update && apt-get install -y curl openssl
       for i in $(seq 1 100); do
         RANDOM_INPUT=$(openssl rand -hex 20)
         STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FUZZING_TARGET/api/todos?title=$RANDOM_INPUT" || echo "FAILED")
         
         if [ $i -eq 100 ]; then
-          echo "  {\"input\": \"$RANDOM_INPUT\", \"status\": \"$STATUS\"}" >> reports/fuzz-report.json
+          echo "  {\"id\": \"crash-$i\", \"exception\": \"Fuzz Error HTTP $STATUS\", \"target\": \"/api/todos\", \"input\": \"$RANDOM_INPUT\"}" >> reports/javafuzz-report.json
         else
-          echo "  {\"input\": \"$RANDOM_INPUT\", \"status\": \"$STATUS\"}," >> reports/fuzz-report.json
+          echo "  {\"id\": \"crash-$i\", \"exception\": \"Fuzz Error HTTP $STATUS\", \"target\": \"/api/todos\", \"input\": \"$RANDOM_INPUT\"}," >> reports/javafuzz-report.json
         fi
       done
-    - echo "]" >> reports/fuzz-report.json
+      
+      echo ']}' >> reports/javafuzz-report.json
   artifacts:
     when: always
     paths:
-      - reports/fuzz-report.json
+      - reports/javafuzz-report.json
     expire_in: 1 week
   allow_failure: true
 
@@ -242,3 +245,26 @@ dast-zap:
       - reports/dast-zap-report.json
     expire_in: 1 week
   allow_failure: true
+
+all-security-reports:
+  stage: bundle
+  image: alpine:latest
+  when: always
+  script:
+    - echo "Bundling all available security reports..."
+    - |
+      if [ -d "reports" ]; then
+        echo "The following reports were collected:"
+        ls -la reports/
+      else
+        echo "No reports found. The pipeline likely failed before any scanning jobs could run."
+        mkdir -p reports
+      fi
+    - apk add --no-cache zip
+    - zip -r all-security-reports.zip reports/ || echo "No files to zip, continuing..."
+  artifacts:
+    when: always
+    paths:
+      - reports/
+      - all-security-reports.zip
+    expire_in: 1 month
