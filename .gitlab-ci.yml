@@ -196,7 +196,7 @@ fuzzing-Javafuzz:
     - job: deploy
   script:
     - mkdir -p reports
-    - echo "[" > reports/fuzz-report.json
+    - echo "[" > reports/javafuzz-report.json
     - |
       apt-get update && apt-get install -y curl openssl
       for i in $(seq 1 100); do
@@ -204,16 +204,16 @@ fuzzing-Javafuzz:
         STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FUZZING_TARGET/api/todos?title=$RANDOM_INPUT" || echo "FAILED")
         
         if [ $i -eq 100 ]; then
-          echo "  {\"input\": \"$RANDOM_INPUT\", \"status\": \"$STATUS\"}" >> reports/fuzz-report.json
+          echo "  {\"input\": \"$RANDOM_INPUT\", \"status\": \"$STATUS\"}" >> reports/javafuzz-report.json
         else
-          echo "  {\"input\": \"$RANDOM_INPUT\", \"status\": \"$STATUS\"}," >> reports/fuzz-report.json
+          echo "  {\"input\": \"$RANDOM_INPUT\", \"status\": \"$STATUS\"}," >> reports/javafuzz-report.json
         fi
       done
-    - echo "]" >> reports/fuzz-report.json
+    - echo "]" >> reports/javafuzz-report.json
   artifacts:
     when: always
     paths:
-      - reports/fuzz-report.json
+      - reports/javafuzz-report.json
     expire_in: 1 week
   allow_failure: true
 
