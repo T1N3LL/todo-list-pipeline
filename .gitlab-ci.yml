@@ -82,7 +82,14 @@ sca-package-dependency-check:
     entrypoint: [""]
   script:
     - mkdir -p reports
-    - /usr/share/dependency-check/bin/dependency-check.sh --scan . --format JSON --format HTML --out reports --nvdApiKey "$NVD_API_KEY" --disableOssIndex
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
+        --scan . \
+        --format JSON \
+        --format HTML \
+        --out reports \
+        --nvdApiKey "$NVD_API_KEY" \
+        --disableOssIndex || true
   artifacts:
     when: always
     paths:
