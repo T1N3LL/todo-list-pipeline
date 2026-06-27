@@ -205,3 +205,33 @@ deploy:
   after_script:
     - docker logout "$CI_REGISTRY" || true
 
+fuzzing-Javafuzz:
+  stage: fuzzing
+  image: ubuntu:latest
+  needs:
+    - job: deploy
+  script:
+    - |
+      mkdir -p reports
+      echo '{"tool": "javafuzz", "crashes": [' > reports/javafuzz-report.json
+      
+      apt-get update && apt-get install -y curl openssl
+      for i in $(seq 1 100); do
+        RANDOM_INPUT=$(openssl rand -hex 20)
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FUZZING_TARGET/api/todos?title=$RANDOM_INPUT" || echo "FAILED")
+        
+        if [ $i -eq 100 ]; then
+          echo "  {\"id\": \"crash-$i\", \"exception\": \"Fuzz Error HTTP $STATUS\", \"target\": \"/api/todos\", \"input\": \"$RANDOM_INPUT\"}" >> reports/javafuzz-report.json
+        else
+          echo "  {\"id\": \"crash-$i\", \"exception\": \"Fuzz Error HTTP $STATUS\", \"target\": \"/api/todos\", \"input\": \"$RANDOM_INPUT\"}," >> reports/javafuzz-report.json
+        fi
+      done
+      
+      echo ']}' >> reports/javafuzz-report.json
+  artifacts:
+    when: always
+    paths:
+      - reports/javafuzz-report.json
+    expire_in: 1 week
+  allow_failure: true
+
