@@ -10,7 +10,7 @@ stages:
   - sca-container
   - deploy
   - fuzzing
-  - dast
+  - security-scan
   - bundle
 
 variables:
@@ -236,8 +236,8 @@ fuzzing-Javafuzz:
     expire_in: 1 week
   allow_failure: true
 
-dast-zap:
-  stage: dast
+zap-security-scan:
+  stage: security-scan 
   image:
     name: ghcr.io/zaproxy/zaproxy:stable
     entrypoint: [""]
