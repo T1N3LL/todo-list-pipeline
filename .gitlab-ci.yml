@@ -38,3 +38,32 @@ integration-test:
     - echo "Running Integration Tests..."
     - mvn verify -Dskip.surefire.tests=true
 
+sast-semgrep:
+  stage: sast
+  image: returntocorp/semgrep
+  script:
+    - mkdir -p reports
+    - semgrep scan --config=auto --json --output=reports/gl-sast-report.json .
+  artifacts:
+    paths:
+      - reports/gl-sast-report.json
+    expire_in: 1 week
+    when: always
+  allow_failure: true
+
+sast-gitleaks:
+  stage: sast
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  script:
+    - mkdir -p reports
+    - gitleaks detect --source="$CI_PROJECT_DIR" --report-format=json --report-path=reports/gl-secret-detection-report.json --exit-code=0
+  artifacts:
+    paths:
+      - reports/gl-secret-detection-report.json
+    expire_in: 1 week
+    when: always
+  allow_failure: true
+
+
