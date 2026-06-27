@@ -26,3 +26,15 @@ build:
     - mvn -version
     - mvn clean compile
 
+unit-test:
+  stage: test
+  script:
+    - echo "Running Unit Tests..."
+    - mvn test
+
+integration-test:
+  stage: test
+  script:
+    - echo "Running Integration Tests..."
+    - mvn verify -Dskip.surefire.tests=true
+
