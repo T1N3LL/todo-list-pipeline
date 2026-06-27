@@ -236,3 +236,27 @@ fuzzing-Javafuzz:
   allow_failure: true
 
 
+
+all-security-reports:
+  stage: bundle
+  image: alpine:latest
+  when: always
+  script:
+    - echo "Bundling all available security reports..."
+    - |
+      if [ -d "reports" ]; then
+        echo "The following reports were collected:"
+        ls -la reports/
+      else
+        echo "No reports found. The pipeline likely failed before any scanning jobs could run."
+        mkdir -p reports
+      fi
+    - apk add --no-cache zip
+    - zip -r all-security-reports.zip reports/ || echo "No files to zip, continuing..."
+  artifacts:
+    when: always
+    paths:
+      - reports/
+      - all-security-reports.zip
+    expire_in: 1 month
+
