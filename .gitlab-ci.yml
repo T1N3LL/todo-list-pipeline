@@ -10,7 +10,7 @@ stages:
   - sca-container
   - deploy
   - fuzzing
-  - security-scan 
+  - dast
   - bundle
 
 variables:
@@ -76,9 +76,8 @@ package-jar:
       - target/*.jar
     expire_in: 1 hour
 
-download-nvd-database:
+sca-package-dependency-check:
   stage: sca-package
-  timeout: 2h
   image:
     name: owasp/dependency-check:latest
     entrypoint: [""]
@@ -94,35 +93,10 @@ download-nvd-database:
         --scan . \
         --data ./odc-data \
         --format JSON \
-        --out reports/ \
-        --nvdApiKey $NVD_API_KEY || true
-  artifacts:
-    when: always
-    paths:
-      - odc-data/
-  allow_failure: true
-
-sca-package-dependency-check:
-  stage: sca-package
-  image:
-    name: owasp/dependency-check:latest
-    entrypoint: [""]
-  needs:
-    - job: download-nvd-database
-      artifacts: true
-  cache:
-    key: dependency-check-nvd-db
-    paths:
-      - odc-data/
-  script:
-    - mkdir -p reports
-    - |
-      /usr/share/dependency-check/bin/dependency-check.sh \
-        --scan . \
-        --data ./odc-data \
-        --format JSON \
         --format HTML \
-        --out reports
+        --out reports \
+        --nvdApiKey "$NVD_API_KEY" \
+        --disableOssIndex 
   artifacts:
     when: always
     paths:
@@ -227,7 +201,7 @@ deploy:
       done
       echo "Health check FAILED after 60 seconds."
       docker logs --tail 100 "$CONTAINER_NAME" || true
-      exit 0
+      exit 1
   after_script:
     - docker logout "$CI_REGISTRY" || true
 
@@ -236,6 +210,7 @@ fuzzing-Javafuzz:
   image: ubuntu:latest
   needs:
     - job: deploy
+      optional: true
   script:
     - |
       mkdir -p reports
@@ -261,13 +236,14 @@ fuzzing-Javafuzz:
     expire_in: 1 week
   allow_failure: true
 
-zap-security-scan:
-  stage: security-scan  
+dast-zap:
+  stage: dast
   image:
     name: ghcr.io/zaproxy/zaproxy:stable
     entrypoint: [""]
   needs:
     - job: deploy
+      optional: true
   script:
     - mkdir -p reports
     - mkdir -p /zap/wrk
@@ -280,7 +256,6 @@ zap-security-scan:
       - reports/dast-zap-report.json
     expire_in: 1 week
   allow_failure: true
-
 
 all-security-reports:
   stage: bundle
