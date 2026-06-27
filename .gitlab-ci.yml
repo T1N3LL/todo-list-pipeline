@@ -76,7 +76,7 @@ package-jar:
       - target/*.jar
     expire_in: 1 hour
 
-sca-package-dependency-check:
+download-nvd-database:
   stage: sca-package
   image:
     name: owasp/dependency-check:latest
@@ -86,17 +86,39 @@ sca-package-dependency-check:
     paths:
       - odc-data/
   script:
-    - mkdir -p reports
     - mkdir -p odc-data
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
+        --data ./odc-data \
+        --nvdApiKey "$NVD_API_KEY" \
+        --updateOnly
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - odc-data/
+
+sca-package-dependency-check:
+  stage: sca-package
+  image:
+    name: owasp/dependency-check:latest
+    entrypoint: [""]
+  needs:
+    - job: download-nvd-database
+      artifacts: true
+  cache:
+    key: dependency-check-nvd-db
+    paths:
+      - odc-data/
+  script:
+    - mkdir -p reports
     - |
       /usr/share/dependency-check/bin/dependency-check.sh \
         --scan . \
         --data ./odc-data \
         --format JSON \
         --format HTML \
-        --out reports \
-        --nvdApiKey "$NVD_API_KEY" \
-        --disableOssIndex 
+        --out reports
   artifacts:
     when: always
     paths:
