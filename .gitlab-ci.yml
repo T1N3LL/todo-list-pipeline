@@ -10,7 +10,7 @@ stages:
   - sca-container
   - deploy
   - fuzzing
-  - dast
+  - security-scan
   - bundle
 
 variables:
@@ -81,21 +81,28 @@ sca-package-dependency-check:
   image:
     name: owasp/dependency-check:latest
     entrypoint: [""]
+  cache:
+    key: dependency-check-nvd-db
+    paths:
+      - odc-data/
   script:
     - mkdir -p reports
+    - mkdir -p odc-data
     - |
       /usr/share/dependency-check/bin/dependency-check.sh \
         --scan . \
+        --data ./odc-data \
         --format JSON \
         --format HTML \
         --out reports \
         --nvdApiKey "$NVD_API_KEY" \
-        --disableOssIndex || true
+        --disableOssIndex 
   artifacts:
     when: always
     paths:
       - reports/
   allow_failure: true
+
 
 publish-container:
   stage: publish
@@ -110,6 +117,7 @@ publish-container:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - docker build -t "$CI_REGISTRY_IMAGE:latest" .
     - docker push "$CI_REGISTRY_IMAGE:latest"
+
 
 publish-package:
   stage: publish
@@ -136,6 +144,7 @@ publish-package:
       </settings>
       EOF
     - mvn -s settings.xml deploy -DskipTests -Dmaven.install.skip=true || echo "Skipped remote deploy"
+
 
 sca-container-trivy:
   stage: sca-container
@@ -201,6 +210,7 @@ fuzzing-Javafuzz:
   image: ubuntu:latest
   needs:
     - job: deploy
+      optional: true
   script:
     - |
       mkdir -p reports
@@ -226,19 +236,20 @@ fuzzing-Javafuzz:
     expire_in: 1 week
   allow_failure: true
 
-dast-zap:
-  stage: dast
+zap-security-scan:
+  stage: security-scan 
   image:
     name: ghcr.io/zaproxy/zaproxy:stable
     entrypoint: [""]
   needs:
     - job: deploy
+      optional: true
   script:
     - mkdir -p reports
     - mkdir -p /zap/wrk
     - echo "Starting ZAP Baseline Scan against $DAST_TARGET..."
     - zap-baseline.py -t $DAST_TARGET -J dast-zap-report.json || true
-    - cp /zap/wrk/dast-zap-report.json reports/ || true
+    - cp dast-zap-report.json reports/ || true
   artifacts:
     when: always
     paths:
