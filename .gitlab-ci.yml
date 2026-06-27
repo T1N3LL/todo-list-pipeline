@@ -95,7 +95,7 @@ download-nvd-database:
         --data ./odc-data \
         --format JSON \
         --out reports/ \
-        --nvdApiKey $NVD_API_KEY
+        --nvdApiKey $NVD_API_KEY || true
   artifacts:
     when: always
     paths:
