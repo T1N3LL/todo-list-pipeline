@@ -66,4 +66,13 @@ sast-gitleaks:
     when: always
   allow_failure: true
 
+package-jar:
+  stage: package
+  script:
+    - echo "Packaging Todo List into a JAR..."
+    - mvn package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 hour
 
