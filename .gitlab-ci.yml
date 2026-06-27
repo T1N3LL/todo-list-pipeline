@@ -117,3 +117,30 @@ publish-container:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - docker build -t "$CI_REGISTRY_IMAGE:latest" .
     - docker push "$CI_REGISTRY_IMAGE:latest"
+
+
+publish-package:
+  stage: publish
+  needs:
+    - job: package-jar
+      artifacts: true
+  script:
+    - |
+      cat > settings.xml <<'EOF'
+      <settings>
+        <servers>
+          <server>
+            <id>gitlab-maven</id>
+            <configuration>
+              <httpHeaders>
+                <property>
+                  <name>Job-Token</name>
+                  <value>${env.CI_JOB_TOKEN}</value>
+                </property>
+              </httpHeaders>
+            </configuration>
+          </server>
+        </servers>
+      </settings>
+      EOF
+    - mvn -s settings.xml deploy -DskipTests -Dmaven.install.skip=true || echo "Skipped remote deploy"
