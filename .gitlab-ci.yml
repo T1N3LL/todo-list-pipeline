@@ -144,3 +144,23 @@ publish-package:
       </settings>
       EOF
     - mvn -s settings.xml deploy -DskipTests -Dmaven.install.skip=true || echo "Skipped remote deploy"
+
+
+sca-container-trivy:
+  stage: sca-container
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  before_script:
+    - trivy image --download-db-only
+    - echo "$CI_REGISTRY_PASSWORD" | trivy registry login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - mkdir -p reports
+    - trivy image --format json --output reports/trivy-report.json --exit-code 0 $CI_REGISTRY_IMAGE:latest
+  artifacts:
+    paths:
+      - reports/trivy-report.json
+    expire_in: 1 week
+    when: always
+  allow_failure: true
+
