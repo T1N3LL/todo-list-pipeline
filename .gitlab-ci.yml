@@ -164,3 +164,44 @@ sca-container-trivy:
     when: always
   allow_failure: true
 
+deploy:
+  stage: deploy
+  tags:
+    - ubuntu
+  needs:
+    - job: publish-container
+      optional: true
+  variables:
+    CONTAINER_NAME: todolist
+    APP_PORT: "8080"
+    CONTAINER_PORT: "8080"
+    HEALTH_URL: "http://localhost:8080/actuator/health"
+    DEPLOY_IMAGE: "${CI_REGISTRY_IMAGE}:latest"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker pull "$DEPLOY_IMAGE"
+    - docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+    - |
+        docker run -d \
+          --name "$CONTAINER_NAME" \
+          --restart unless-stopped \
+          -p ${APP_PORT}:${CONTAINER_PORT} \
+          "$DEPLOY_IMAGE"
+    - |
+      echo "Waiting for $HEALTH_URL to return HTTP 200 (max 60s)..."
+      for i in $(seq 1 30); do
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+        if [ "$STATUS" = "200" ]; then
+          echo "Health check passed on attempt $i (HTTP 200)."
+          exit 0
+        fi
+        echo "Attempt $i/30: got HTTP $STATUS, retrying in 2s..."
+        sleep 2
+      done
+      echo "Health check FAILED after 60 seconds."
+      docker logs --tail 100 "$CONTAINER_NAME" || true
+      exit 1
+  after_script:
+    - docker logout "$CI_REGISTRY" || true
+
